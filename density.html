@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>BuildBPS</title>
+
+    <link href="bootstrap-3.3.7-dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="bootstrap-3.3.7-dist/css/bootstrap-theme.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
+    <link rel="stylesheet" href="font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="leaflet-vector-markers.css">
+    <script src="jquery-3.2.1.min.js"></script>
+    <script src="bootstrap-3.3.7-dist/js/bootstrap.js"></script>
+    <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
+    <script src="leaflet-vector-markers.min.js"></script>
+    <script src="svg-icon.js"></script>
+    <script src="tracts.js"></script>
+    <script src="schools.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        label {
+            font-weight: 200;
+        }
+
+        a {
+            color: #333;
+        }
+
+            a:visited {
+                color: #333;
+            }
+
+        #map {
+            height: 100%;
+        }
+
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+
+            .info h4 {
+                margin: 0 0 5px;
+                color: #777;
+            }
+
+        .legend {
+            line-height: 18px;
+            color: #555;
+        }
+
+        .btn-default {
+            background-image: none;
+            border: none;
+            background-color: transparent;
+            box-shadow: none;
+            font-size: 20px;
+            line-height: 24px;
+        }
+
+        .title {
+            font-size: 18px;
+            line-height: 22px;
+            text-align: center;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+
+        .gradient {
+            float: left;
+            background: linear-gradient(to bottom, #0022ff 0%,#ff2200 100%);
+            height: 50px;
+            width: 10px;
+            opacity: 0.7;
+        }
+
+        .vector-marker i {
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script>
+        var earlyLearningMarkers;
+        var elementaryMarkers;
+        var k8Markers;
+        var middleMarkers;
+        var highSchoolMarkers;
+        var specialMarkers;
+
+        var mapBackground = "School_Age_Density";
+        var backgroundInfoList =
+        {
+            "School_Age_Density": {
+                "title": "Density of School Age Children",
+                "keyRangeText": ["&nbsp;0&nbsp;Kids/mi<sup>2</sup>", "&nbsp;&gt;&nbsp;5K&nbsp;Kids/mi<sup>2</sup>"],
+                "keyRangeTitle": ["Zero Children age 5-17 per Square Mile", "Greater Than 5,000 Children age 5-17 per Square Mile"],
+                mapLayerFunction: function (feature) {
+                    var densityColor = Math.round((Math.min(feature.properties.Density, 5000) * (255.000/5000.000))).toString(16);
+                    if (densityColor.length == 1)
+                        densityColor = "0" + densityColor;
+
+                    var lowDensityColor = Math.round((5000 - Math.min(feature.properties.Density, 5000)) * (255.000/5000.000)).toString(16);
+                    if (lowDensityColor.length == 1)
+                        lowDensityColor = "0" + lowDensityColor;
+
+                    return {
+                        "color": "#" + lowDensityColor + "22" + densityColor,
+                        "weight": .6,
+                        "opacity": (feature.properties.TotalPop > 0) ? 0.35 : 0,
+                        "fillOpacity": (feature.properties.TotalPop > 0) ? 0.4 : 0
+                    };
+                },
+                popUpFunction: function (feature, layer) {
+                    var popupContent = Math.round(feature.properties.Density).toString() + " School age Children per Square Mile";
+                    layer.bindPopup(popupContent);
+                }
+            },
+            "Non_White_Residents": {
+                "title": "Percentage of People of Color",
+                "keyRangeText": ["&nbsp;0%&nbsp;PoC", "&nbsp;100%&nbsp;PoC"],
+                "keyRangeTitle": ["0% People of Color", "100% People of Color"],
+                mapLayerFunction: function (feature) {
+                    var nonWhiteColor = Math.round((feature.properties.NonWhite * 2.55)).toString(16);
+                    if (nonWhiteColor.length == 1)
+                        nonWhiteColor = "0" + nonWhiteColor;
+
+                    var whiteColor = Math.round(((100 - feature.properties.NonWhite) * 2.55)).toString(16);
+                    if (whiteColor.length == 1)
+                        whiteColor = "0" + whiteColor;
+
+                    return {
+                        "color": "#" + whiteColor + "22" + nonWhiteColor,
+                        "weight": .6,
+                        "opacity": (feature.properties.TotalPop > 0) ? 0.35 : 0,
+                        "fillOpacity": (feature.properties.TotalPop > 0) ? 0.4 : 0
+                    };
+                },
+                popUpFunction: function (feature, layer) {
+                    var popupContent = feature.properties.NonWhite.toString() + "% People of Color";
+                    layer.bindPopup(popupContent);
+                }
+
+            }
+        };
+
+        var backgroundInfo = backgroundInfoList[mapBackground];
+
+        var markerType = "Learning_Environments";
+
+        var markerInfoList = {
+            "Learning_Environments": {
+                "title": "Quality of School Learning Environments",
+                "legendTitle": "Learning Environments",
+                "valueFunction": function (school) {
+                    return school.learningEnvironments;
+                }
+            },
+            "Building_Condition": {
+                "title": "School Building Condition",
+                "legendTitle": "Building Condition",
+                "valueFunction": function (school) {
+                    return school.buildingCondition;
+                }
+            }
+        };
+
+        var markerInfo = markerInfoList[markerType];
+
+        var mymap = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.5 }).setView([42.316789, -71.075115], 12);
+
+        L.tileLayer('http://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_new">OpenStreetMap</a>, &copy;<a href="https://carto.com/attribution" target="_new">CARTO</a>',
+        }).addTo(mymap);
+
+        var tractShapes;
+
+        function addBackground() {
+            tractShapes = L.geoJSON(tracts, {
+                onEachFeature: backgroundInfo.popUpFunction,
+                style: backgroundInfo.mapLayerFunction
+            }).addTo(mymap);
+        }
+
+        addBackground();
+
+        mymap.fitBounds(tractShapes.getBounds());
+
+        var iconOptions = {
+            icon: 'building',
+            iconSize: [28, 35],
+            markerColor: 'black'
+        };
+
+        iconOptions.markerColor = '#e51300';
+        var poorMarker = L.VectorMarkers.icon(iconOptions);
+
+        iconOptions.markerColor = '#ef8409';
+        var fairMarker = L.VectorMarkers.icon(iconOptions);
+
+        iconOptions.markerColor = 'green';
+        var goodMarker = L.VectorMarkers.icon(iconOptions);
+
+        iconOptions.markerColor = '#112bc1';
+        var excellentMarker = L.VectorMarkers.icon(iconOptions);
+
+        iconOptions.markerColor = 'grey';
+        var notAssessedMarker = L.VectorMarkers.icon(iconOptions);
+
+        var pageLoad = true;
+
+        function addMarkers() {
+            earlyLearningMarkers = [];
+            elementaryMarkers = [];
+            k8Markers = [];
+            middleMarkers = [];
+            highSchoolMarkers = [];
+            specialMarkers = [];
+
+            for (var i = 0; i < schools.length; i++) {
+                var icon = notAssessedMarker;
+
+                switch (markerInfo.valueFunction(schools[i])) {
+                    case "Poor":
+                        icon = poorMarker;
+                        break;
+                    case "Fair":
+                        icon = fairMarker;
+                        break;
+                    case "Good":
+                        icon = goodMarker;
+                        break;
+                    case "Excellent":
+                        icon = excellentMarker;
+                        break;
+                }
+                marker = new L.marker(schools[i].latLng, {
+                    icon: icon
+                }).bindPopup(schools[i].Name);
+
+                switch (schools[i].gradeLevel) {
+                    case "Early Learning":
+                        earlyLearningMarkers.push(marker);
+                        break;
+                    case "Elementary School":
+                        elementaryMarkers.push(marker);
+                        break;
+                    case "K-8":
+                        k8Markers.push(marker);
+                        break;
+                    case "Middle School":
+                        middleMarkers.push(marker);
+                        break;
+                    case "High School":
+                        highSchoolMarkers.push(marker);
+                        break;
+                    case "Special":
+                        specialMarkers.push(marker);
+                        break;
+                }
+            }
+
+            earlyLearningMarkers = L.featureGroup(earlyLearningMarkers);
+            elementaryMarkers = L.featureGroup(elementaryMarkers);
+            k8Markers = L.featureGroup(k8Markers);
+            middleMarkers = L.featureGroup(middleMarkers);
+            highSchoolMarkers = L.featureGroup(highSchoolMarkers);
+            specialMarkers = L.featureGroup(specialMarkers);
+
+            if (pageLoad || $("#earlylearning").is(":checked"))
+                earlyLearningMarkers.addTo(mymap);
+            if (pageLoad || $("#elementary").is(":checked"))
+                elementaryMarkers.addTo(mymap);
+            if (pageLoad || $("#k8").is(":checked"))
+                k8Markers.addTo(mymap);
+            if (pageLoad || $("#middle").is(":checked"))
+                middleMarkers.addTo(mymap);
+            if (pageLoad || $("#highschool").is(":checked"))
+                highSchoolMarkers.addTo(mymap);
+
+            pageLoad = false;
+        }
+
+        addMarkers();
+
+        var legend = L.control({ position: 'bottomleft' });
+
+        legend.onAdd = function (mymap) {
+            var legendMarker = '<div class="vector-marker-icon-green vector-marker leaflet-zoom-animated leaflet-interactive" tabindex="0" style="float: left; position: relative;width: 10px;height: 15px;z-index: 147;"><svg width="10px" height="15px" viewBox="0 0 32 52" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M16,1 C7.7146,1 1,7.65636364 1,15.8648485 C1,24.0760606 16,51 16,51 C16,51 31,24.0760606 31,15.8648485 C31,7.65636364 24.2815,1 16,1 L16,1 Z" fill="#fill#"></path></svg></div>';
+
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML += "<div style='margin-bottom: 5px;'>" + markerInfo.legendTitle + "</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#112bc1") + "&nbsp;Excellent</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "green") + "&nbsp;Good</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#ef8409") + "&nbsp;Fair</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#e51300") + "&nbsp;Poor</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "grey") + "&nbsp;Not&nbsp;Assessed</div>";
+            div.innerHTML += "<div style='margin-top: 10px;margin-bottom: 5px;'>Map Colors</div>";
+            div.innerHTML += "<div><div class='gradient'></div><div style='height:50px;'>" +
+                "<div style='height:50%; line-height: 5px;' title='" + backgroundInfo.keyRangeTitle[1] + "'>" + backgroundInfo.keyRangeText[1] + "</div>" +
+                "<div style='display:flex; align-items: flex-end; height:50%;line-height: 9px;' title='" + backgroundInfo.keyRangeTitle[0] + "'>" + backgroundInfo.keyRangeText[0] + "</div></div></div>";
+            return div;
+        }
+
+        legend.addTo(mymap);
+
+
+        var title = L.control({ position: 'topright' });
+
+        title.onAdd = function (mymap) {
+            var div = L.DomUtil.create('div', 'info title');
+            var titleControls =
+                '<div class="dropdown">' +
+                '<button class="btn btn-default dropdown-toggle" type="button" id="markerMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">' +
+                    '<span id="markerTitle">' + markerInfo.title + ' </span>' +
+                    '<span class="caret"></span>' +
+                '</button> ' +
+              '<ul class="dropdown-menu">';
+            for (var markerName in markerInfoList) {
+                titleControls += '<li><a href="#" class="markeroption" id="' + markerName + '">' + markerInfoList[markerName].title + '</a></li>';
+            }
+
+            titleControls += '</ul>' +
+            '</div>' +
+            '<div class="dropdown">' +
+                '<button class="btn btn-default dropdown-toggle" type="button" id="backgroundMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">' +
+                    '<span id="backgroundTitle">' + backgroundInfo.title + ' </span>' +
+                    '<span class="caret"></span>' +
+                '</button> ' +
+              '<ul class="dropdown-menu">';
+
+            for (var backgroundName in backgroundInfoList) {
+                titleControls += '<li><a href="#" class="backgroundoption" id="' + backgroundName + '">' + backgroundInfoList[backgroundName].title + '</a></li>';
+            }
+            titleControls += '</ul>' +
+            '</div>';
+
+            div.innerHTML += titleControls;
+            return div;
+        }
+
+        title.addTo(mymap);
+
+        $(".markeroption").click(function (e) {
+            $("#markerTitle").text(e.target.text + ' ');
+
+            earlyLearningMarkers.removeFrom(mymap);
+            elementaryMarkers.removeFrom(mymap);
+            k8Markers.removeFrom(mymap);
+            middleMarkers.removeFrom(mymap);
+            highSchoolMarkers.removeFrom(mymap);
+            specialMarkers.removeFrom(mymap);
+
+            markerInfo = markerInfoList[e.target.id];
+
+            addMarkers();
+        });
+        $(".backgroundoption").click(function (e) {
+            $("#backgroundTitle").text(e.target.text + ' ');
+
+            tractShapes.removeFrom(mymap);
+
+            backgroundInfo = backgroundInfoList[e.target.id];
+
+            addBackground();
+        });
+
+        var menu = L.control({ position: 'bottomright' });
+        menu.onAdd = function (mymap) {
+            var div = L.DomUtil.create('div', 'info');
+
+            div.innerHTML += "<div><input id='earlylearning' name='earlylearning' type='checkbox' onclick='schoolTypeChanged(this)' checked></input><label for='earlylearning'>Early Learning</label></div>";
+            div.innerHTML += "<div><input id='elementary' name='elementary' type='checkbox' onclick='schoolTypeChanged(this)' checked></input><label for='elementary'>Elementary</label></div>";
+            div.innerHTML += "<div><input id='k8' name='k8' type='checkbox' onclick='schoolTypeChanged(this)' checked></input><label for='k8'/label>K-8</label></div>";
+            div.innerHTML += "<div><input id='middle' name='middle' type='checkbox' onclick='schoolTypeChanged(this)' checked></input><label for='middle'>Middle</label></div>";
+            div.innerHTML += "<div><input id='highschool' name='highschool' type='checkbox' onclick='schoolTypeChanged(this)' checked></input><label for='highschool'>High School</label></div>";
+            div.innerHTML += "<div><input id='special' name='special' type='checkbox' onclick='schoolTypeChanged(this)' checked></input><label for='special'>Special</label></div>";
+            //div.innerHTML += "<div class='fa fa-navicon'></div>";
+            return div;
+        }
+        menu.addTo(mymap);
+
+        function schoolTypeChanged(checkbox) {
+            var schoolLayer;
+            switch (checkbox.id) {
+                case "earlylearning":
+                    schoolLayer = earlyLearningMarkers;
+                    break;
+                case "elementary":
+                    schoolLayer = elementaryMarkers;
+                    break;
+                case "k8":
+                    schoolLayer = k8Markers;
+                    break;
+                case "middle":
+                    schoolLayer = middleMarkers;
+                    break;
+                case "highschool":
+                    schoolLayer = highSchoolMarkers;
+                    break;
+                case "special":
+                    schoolLayer = specialMarkers;
+                    break;
+            }
+
+            if (checkbox.checked)
+                schoolLayer.addTo(mymap);
+            else
+                schoolLayer.removeFrom(mymap);
+        }
+    </script>
+
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-35704622-1', 'auto');
+  ga('send', 'pageview');
+
+    </script>
+</body>
+</html>
