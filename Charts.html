@@ -34,6 +34,28 @@
         var conditions = ["n/a", "Poor", "Fair", "Good", "Excellent"];
 
         var yAxisInfoList = {
+            "Building_Condition": {
+                "title": "School Building Condition",
+                "shortTitle": "Condition",
+                "valueFunction": function (school) {
+                    return getConditionValue(school.buildingCondition);
+                },
+                "displayFunction": function (value) {
+                    return value > 0;
+                },
+                "categories": conditions
+            },
+            "Site_Condition": {
+                "title": "School Site Condition",
+                "shortTitle": "Site Condition",
+                "valueFunction": function (school) {
+                    return getConditionValue(school.SiteCondition);
+                },
+                "displayFunction": function (value) {
+                    return value > 0;
+                },
+                "categories": conditions
+            },
             "Learning_Environments": {
                 "title": "Quality of School Learning Environments",
                 "shortTitle": "Learning Environments",
@@ -45,17 +67,17 @@
                 },
                 "categories": conditions
             },
-            "Building_Condition": {
-                "title": "School Building Condition",
-                "shortTitle": "Condition",
+            "Effectiveness_Spaces": {
+                "title": "Effectiveness of Educational Spaces",
+                "shortTitle": "Effectiveness of Spaces",
                 "valueFunction": function (school) {
-                    return getConditionValue(school.buildingCondition);
+                    return getConditionValue(school.EffectivenessSpaces);
                 },
                 "displayFunction": function (value) {
                     return value > 0;
                 },
                 "categories": conditions
-            }
+            },
         };
         var yAxisInfo = yAxisInfoList[yAxisType];
 
