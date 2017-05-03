@@ -123,7 +123,7 @@ var markerInfoList = {
 
 var markerInfo = markerInfoList[markerType];
 
-var mymap = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.5 }).setView([42.316789, -71.075115], 12);
+var mymap = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.5, zoomControl: false }).setView([42.316789, -71.075115], 12);
 
 L.tileLayer('http://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_new">OpenStreetMap</a>, &copy;<a href="https://carto.com/attribution" target="_new">CARTO</a>',
@@ -272,6 +272,18 @@ function addLegend() {
 }
 
 addLegend();
+
+var home = L.control({ position: 'topleft' });
+home.onAdd = function (mymap) {
+    var div = L.DomUtil.create('div');
+    div.innerHTML += '<a href="index.html" title="Home"><div class="info fa fa-home" style="font: normal normal normal 18px/1 FontAwesome"></div></a>';
+    return div;
+}
+home.addTo(mymap);
+
+L.control.zoom({
+    position: 'topleft'
+}).addTo(mymap);
 
 var title = L.control({ position: 'topright' });
 
