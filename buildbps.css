@@ -8,11 +8,11 @@ label {
 }
 
 a {
-    color: #333;
+    color: #000 !important;
 }
         
 a:visited {
-    color: #333;
+    color: #000;
 }
 
 #map {
