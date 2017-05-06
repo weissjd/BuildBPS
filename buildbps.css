@@ -5,6 +5,8 @@
 
 label {
     font-weight: 200;
+    vertical-align: top;
+    margin-top: 2px;
 }
 
 a {
@@ -17,6 +19,10 @@ a:visited {
 
 #map {
     height: 100%;
+}
+
+input[type=checkbox] {
+    margin-right: 3px;
 }
 
 .info {
@@ -45,6 +51,11 @@ a:visited {
     box-shadow: none;
     font-size: 20px !important;
     line-height: 24px !important;
+    font-family: "quatro-slab", serif;
+}
+
+.pageTitle {
+    font-weight: 700;
 }
 
 .title {
@@ -52,6 +63,16 @@ a:visited {
     font-size: 20px;
     line-height: 24px;
     padding: 6px 2px 2px 2px;
+    font-family: "quatro-slab", serif;
+    font-style: normal;
+}
+
+.descriptive {
+    font-size: 18px;
+    padding: 6px 2px 2px 2px;
+    font-family: "quatro-slab", serif;
+    font-style: normal;
+    font-weight: 400;
 }
 
 #title {

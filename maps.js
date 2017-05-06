@@ -93,7 +93,7 @@ var markerType = "Building_Condition";
 var markerInfoList = {
     "Site_Condition": {
         "title": "School Site Condition",
-        "legendTitle": "Site Condition",
+        "legendTitle": "School Site Condition",
         "valueFunction": function (school) {
             return school.SiteCondition;
         }
@@ -117,6 +117,13 @@ var markerInfoList = {
         "legendTitle": "Learning Environments",
         "valueFunction": function (school) {
             return school.learningEnvironments;
+        }
+    },
+    "Play_Areas": {
+        "title": "Play Areas",
+        "legendTitle": "Play Areas",
+        "valueFunction": function (school) {
+            return school.PlayAreas;
         }
     },
 };
@@ -148,23 +155,20 @@ var iconOptions = {
     markerColor: 'black'
 };
 
-iconOptions.markerColor = '#000000';
-var deficientMarker = L.VectorMarkers.icon(iconOptions);
+var markerList = {
+    "Deficient": { color: '#000000' },
+    "Poor": { color: '#e51300' },
+    "Fair": { color: '#ef8409' },
+    "Good": { color: 'green' },
+    "Excellent": { color: '#112bc1' },
+    "Not_Assessed": { color: 'grey' },
 
-iconOptions.markerColor = '#e51300';
-var poorMarker = L.VectorMarkers.icon(iconOptions);
-
-iconOptions.markerColor = '#ef8409';
-var fairMarker = L.VectorMarkers.icon(iconOptions);
-
-iconOptions.markerColor = 'green';
-var goodMarker = L.VectorMarkers.icon(iconOptions);
-
-iconOptions.markerColor = '#112bc1';
-var excellentMarker = L.VectorMarkers.icon(iconOptions);
-
-iconOptions.markerColor = 'grey';
-var notAssessedMarker = L.VectorMarkers.icon(iconOptions);
+    "Replace": { color: '#e51300' },
+    "Minor": { color: '#ef8409' },
+    "Moderate": { color: 'green' },
+    "Adequate": { color: '#112bc1' },
+    "Not_Present": { color: 'grey' },
+};
 
 var pageLoad = true;
 
@@ -177,48 +181,34 @@ function addMarkers() {
     specialMarkers = [];
 
     for (var i = 0; i < schools.length; i++) {
-        var icon = notAssessedMarker;
 
-        switch (markerInfo.valueFunction(schools[i])) {
-            case "Deficient":
-                icon = deficientMarker;
-                break;
-            case "Poor":
-                icon = poorMarker;
-                break;
-            case "Fair":
-                icon = fairMarker;
-                break;
-            case "Good":
-                icon = goodMarker;
-                break;
-            case "Excellent":
-                icon = excellentMarker;
-                break;
-        }
-        marker = new L.marker(schools[i].latLng, {
-            icon: icon
-        }).bindPopup(schools[i].Name);
+        if (markerList[markerInfo.valueFunction(schools[i]).replace(" ", "_")]) {
+            iconOptions.markerColor = markerList[markerInfo.valueFunction(schools[i]).replace(" ", "_")].color;
+            
+            marker = new L.marker(schools[i].latLng, {
+                icon: L.VectorMarkers.icon(iconOptions)
+            }).bindPopup(schools[i].Name);
 
-        switch (schools[i].gradeLevel) {
-            case "Early Learning":
-                earlyLearningMarkers.push(marker);
-                break;
-            case "Elementary School":
-                elementaryMarkers.push(marker);
-                break;
-            case "K-8":
-                k8Markers.push(marker);
-                break;
-            case "Middle School":
-                middleMarkers.push(marker);
-                break;
-            case "High School":
-                highSchoolMarkers.push(marker);
-                break;
-            case "Special":
-                specialMarkers.push(marker);
-                break;
+            switch (schools[i].gradeLevel) {
+                case "Early Learning":
+                    earlyLearningMarkers.push(marker);
+                    break;
+                case "Elementary School":
+                    elementaryMarkers.push(marker);
+                    break;
+                case "K-8":
+                    k8Markers.push(marker);
+                    break;
+                case "Middle School":
+                    middleMarkers.push(marker);
+                    break;
+                case "High School":
+                    highSchoolMarkers.push(marker);
+                    break;
+                case "Special":
+                    specialMarkers.push(marker);
+                    break;
+            }
         }
     }
 
@@ -254,13 +244,23 @@ function addLegend() {
         var legendMarker = '<div class="vector-marker-icon-green vector-marker leaflet-zoom-animated leaflet-interactive" tabindex="0" style="float: left; position: relative;width: 10px;height: 15px;z-index: 147;"><svg width="10px" height="15px" viewBox="0 0 32 52" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M16,1 C7.7146,1 1,7.65636364 1,15.8648485 C1,24.0760606 16,51 16,51 C16,51 31,24.0760606 31,15.8648485 C31,7.65636364 24.2815,1 16,1 L16,1 Z" fill="#fill#"></path></svg></div>';
 
         var div = L.DomUtil.create('div', 'info legend');
-        div.innerHTML += "<div style='margin-bottom: 5px;'>" + markerInfo.legendTitle + "</div>";
-        div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#112bc1") + "&nbsp;Excellent</div>";
-        div.innerHTML += "<div>" + legendMarker.replace("#fill#", "green") + "&nbsp;Good</div>";
-        div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#ef8409") + "&nbsp;Fair</div>";
-        div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#e51300") + "&nbsp;Poor</div>";
-        div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#000000") + "&nbsp;Deficient</div>";
-        div.innerHTML += "<div>" + legendMarker.replace("#fill#", "grey") + "&nbsp;Not&nbsp;Assessed</div>";
+        div.innerHTML += "<div style='margin-bottom: 5px; min-width: 140px;'>" + markerInfo.legendTitle + "</div>";
+        if (markerInfo.title == "Play Areas") {
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#112bc1") + "&nbsp;Adequate</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "green") + "&nbsp;Moderate</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#ef8409") + "&nbsp;Minor</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#e51300") + "&nbsp;Replace</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#000000") + "&nbsp;Deficient</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "grey") + "&nbsp;Not&nbsp;Present</div>";
+        }
+        else {
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#112bc1") + "&nbsp;Excellent</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "green") + "&nbsp;Good</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#ef8409") + "&nbsp;Fair</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#e51300") + "&nbsp;Poor</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "#000000") + "&nbsp;Deficient</div>";
+            div.innerHTML += "<div>" + legendMarker.replace("#fill#", "grey") + "&nbsp;Not&nbsp;Assessed</div>";
+        }
         div.innerHTML += "<div style='margin-top: 10px;margin-bottom: 5px;'>Map Colors</div>";
         div.innerHTML += "<div><div class='gradient'></div><div style='height:50px;'>" +
             "<div style='height:50%; line-height: 5px;' title='" + backgroundInfo.keyRangeTitle[1] + "'>" + backgroundInfo.keyRangeText[1] + "</div>" +
@@ -273,10 +273,18 @@ function addLegend() {
 
 addLegend();
 
+var bpsWorkshop = L.control({ position: 'topleft' });
+bpsWorkshop.onAdd = function (mymap) {
+    var div = L.DomUtil.create('div');
+    div.innerHTML += '<a href="http://bpsworkshop.com" title="Go to BPSWorkshop.com"><div class="info"><img src="http://bpsworkshop.com/sites/all/themes/buildit/favicon.png"></div></a>';
+    return div;
+}
+bpsWorkshop.addTo(mymap);
+
 var home = L.control({ position: 'topleft' });
 home.onAdd = function (mymap) {
     var div = L.DomUtil.create('div');
-    div.innerHTML += '<a href="index.html" title="Home"><div class="info fa fa-home" style="font: normal normal normal 18px/1 FontAwesome"></div></a>';
+    div.innerHTML += '<a href="index.html" title="BuildBPS - Exploring Equity - Home"><div class="info fa fa-home" style="font: normal normal normal 18px/1 FontAwesome"></div></a>';
     return div;
 }
 home.addTo(mymap);

@@ -71,11 +71,21 @@ var xAxisInfoList = {
             return true;
         }
     },
-    "Percent_FELL": {
+    "Percent_ELL": {
         "title": "Percent English Language Learners",
         "shortTitle": "% ELL",
         "valueFunction": function (school) {
             return school.PctEll;
+        },
+        "displayFunction": function (value) {
+            return true;
+        }
+    },
+    "Percent_Black_Latino": {
+        "title": "Percent African American + Latino",
+        "shortTitle": "% Black + Latino",
+        "valueFunction": function (school) {
+            return Math.round(10*(school.PctBlack + school.PctLatino))/10;
         },
         "displayFunction": function (value) {
             return true;
