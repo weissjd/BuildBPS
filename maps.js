@@ -137,15 +137,15 @@ L.tileLayer('http://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}
 }).addTo(mymap);
 
 var boundShapes;
+var tractShapes;
 
 function addBackground() {
-    boundShapes = L.geoJSON(tracts, {
+    tractShapes = L.geoJSON(tracts, {
         onEachFeature: backgroundInfo.popUpFunction,
         style: backgroundInfo.mapLayerFunction
     }).addTo(mymap);
 }
-
-        
+       
 addBackground();
 
 if (window.location.href.toLowerCase().indexOf("dsni") >= 0) {
@@ -157,7 +157,9 @@ if (window.location.href.toLowerCase().indexOf("dsni") >= 0) {
 
     }).addTo(mymap);
 }
-
+else {
+    boundShapes = tractShapes;
+}
 mymap.fitBounds(boundShapes.getBounds());
 
 var iconOptions = {
