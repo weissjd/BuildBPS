@@ -136,18 +136,29 @@ L.tileLayer('http://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_new">OpenStreetMap</a>, &copy;<a href="https://carto.com/attribution" target="_new">CARTO</a>',
 }).addTo(mymap);
 
-var tractShapes;
+var boundShapes;
 
 function addBackground() {
-    tractShapes = L.geoJSON(tracts, {
+    boundShapes = L.geoJSON(tracts, {
         onEachFeature: backgroundInfo.popUpFunction,
         style: backgroundInfo.mapLayerFunction
     }).addTo(mymap);
 }
+
         
 addBackground();
 
-mymap.fitBounds(tractShapes.getBounds());
+if (window.location.href.toLowerCase().indexOf("dsni") >= 0) {
+    boundShapes = L.geoJSON(dsni, {
+        style: {"color": "#555",
+                    "weight": 1.9,
+                    "opacity": 1,
+                    "fillOpacity": 0}
+
+    }).addTo(mymap);
+}
+
+mymap.fitBounds(boundShapes.getBounds());
 
 var iconOptions = {
     icon: 'building',
